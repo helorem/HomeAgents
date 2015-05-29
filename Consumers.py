@@ -69,12 +69,13 @@ class BaseConsumer():
             if to_read:
                 self.consume_process(data[0:to_read])
 
-                if self.get_remaining() <= 0:
-                    self.end()
+            if self.get_remaining() <= 0:
+                self.end()
 
     def read_header(self, data):
         #to override
-        return (False, data)
+        #By default, no header
+        return (True, data)
 
     def consume_process(self, data):
         #to override

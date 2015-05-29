@@ -100,7 +100,7 @@ class Client(threading.Thread):
                 break
         return res
 
-    def send_command(self, command, args=None, callback=None, callback_params=None):
+    def send_command(self, command, args=None, callback=None, param=None):
         if command not in Tools.COMMANDS:
             #TODO error
             print "Command '%s' is invalid" % command
@@ -113,13 +113,14 @@ class Client(threading.Thread):
                 time.sleep(1)
                 cmd_id = self.__get_cmd_id()
 
-        self.commands[cmd_id] = (callback, callback_params)
+        print "<< %s" % command
+
+        self.commands[cmd_id] = (callback, param)
         if args:
             if args:
                 to_write = struct.pack("BB", cmd_id, Tools.COMMANDS[command])
                 to_write = "%s%s" % (to_write, args)
-                print Tools.str_to_hex2(to_write)
-                print ""
+                #print Tools.str_to_hex2(to_write)
                 self.write(to_write)
         else:
             to_write = struct.pack("BB", cmd_id, Tools.COMMANDS[command])
@@ -206,7 +207,7 @@ class Server(threading.Thread):
 def on_connect(client):
     print "Client %s is connected" % client.id
     time.sleep(1)
-    send_img(client, "off.png")
+    client.send_command("who_are_you", callback=on_description, param=client)
 
 #TEST FCT
 def on_disconnect(client):
@@ -214,40 +215,68 @@ def on_disconnect(client):
     global actual_img
     actual_img = None
 
+#TEST
+img_buffer = {}
+
 #TEST FCT
 actual_img = None
 def send_img(client, filename):
     global actual_img
+    global img_buffer
 
     print "send_img", filename
 
-    im = Image.open(filename)
-    rgb_im = im.convert("RGB")
-    w, h = im.size
-
-    rect = (0, 0, w, h)
+    found = False
     if actual_img:
-        rect = img_diff(filename, actual_img)
+        name = "%s_%s" % (actual_img, filename)
+        if name in img_buffer:
+            print "load", name
+            palet_size, palet, pixels_size, pixels, rect = img_buffer[name]
+            found = True
+    elif filename in img_buffer:
+        print "load", filename
+        palet_size, palet, pixels_size, pixels, rect = img_buffer[filename]
+        found = True
+
+    if not found:
+        im = Image.open(filename)
+        rgb_im = im.convert("RGB")
+        w, h = im.size
+
+        rect = (0, 0, w, h)
+        if actual_img:
+            rect = img_diff(filename, actual_img)
+            name = "%s_%s" % (actual_img, filename)
+        else:
+            name = filename
+        w = rect[2] - rect[0]
+        h = rect[3] - rect[1]
+
+        print "rect:", rect, w, h
+        rgb_im = rgb_im.crop(rect)
+
+        pixels = []
+        palet = []
+
+        for y in xrange(0, h):
+            for x in xrange(0, w):
+                r, g, b = rgb_im.getpixel((x, y))
+                color = struct.pack("BBB", (r & 0xFF), (g & 0xFF), (b & 0xFF))
+                if color not in palet:
+                    palet.append(color)
+                pixels.append(palet.index(color))
+
+        palet_size = len(palet)
+        pixels_size = len(pixels)
+
+        #use RLE
+        pixels = compress_rle(pixels)
+        pixels_size = len(pixels)
+
+        print "save %s" % name
+        img_buffer[name] = (palet_size, palet, pixels_size, pixels, rect)
+
     actual_img = filename
-    w = rect[2] - rect[0]
-    h = rect[3] - rect[1]
-
-    print "rect:", rect, w, h
-    rgb_im = rgb_im.crop(rect)
-
-    pixels = []
-    palet = []
-
-    for y in xrange(0, h):
-        for x in xrange(0, w):
-            r, g, b = rgb_im.getpixel((x, y))
-            color = struct.pack("BBB", (r & 0xFF), (g & 0xFF), (b & 0xFF))
-            if color not in palet:
-                palet.append(color)
-            pixels.append(palet.index(color))
-
-    palet_size = len(palet)
-    pixels_size = len(pixels)
 
     args = struct.pack("H%s" % ("3s" * palet_size), palet_size, *palet)
     print "len palet : %d" % palet_size
@@ -255,17 +284,10 @@ def send_img(client, filename):
 
     client.send_command("send_palet", args=args, callback=print_cb)
 
-    compress = Tools.C_NONE
-
-    #use RLE
-    compress = Tools.C_RLE
-    pixels = compress_rle(pixels)
-    pixels_size = len(pixels)
-
-    args = struct.pack("HHHIB%s" % ("B" * pixels_size), rect[0], rect[1], w, pixels_size, compress, *pixels)
+    w = rect[2] - rect[0]
+    args = struct.pack("HHHIB%s" % ("B" * pixels_size), rect[0], rect[1], w, pixels_size, Tools.C_RLE, *pixels)
     print "len pixels : %d" % pixels_size
     print "len args : %d" % len(args)
-    print "size :", pixels_size, w * h
 
     client.send_command("draw_pixels", args=args, callback=print_cb)
 
@@ -326,7 +348,9 @@ def compress_rle(pixels):
 
 def print_cb(data):
     cmd, args = data
-    print ">> %s %s" % (cmd, args)
+    print ">> %s" % (cmd)
+    if len(args) > 0:
+        print Tools.str_to_hex2(args)
 
 def on_click(client, data):
     global actual_img
@@ -337,6 +361,10 @@ def on_click(client, data):
         send_img(client, "on.png")
     else:
         send_img(client, "off.png")
+
+def on_description(data, client):
+    print ">> description %s" % (data,)
+    send_img(client, "off.png")
 
 host = "0.0.0.0"
 port = 7654

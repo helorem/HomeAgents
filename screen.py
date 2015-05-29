@@ -102,23 +102,23 @@ while run:
             break
         if flag & POLL_READ:
             msg = sock.recv(512)
-            print "RAW :"
             print Tools.str_to_hex2(msg)
             if not msg:
                 print "over"
                 run = False
                 break
             rep(msg, sock)
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            run = False
-            break
-        elif event.type == pygame.MOUSEBUTTONUP:
-            x, y = event.pos
-            resp_cmd = "click"
-            #TODO improve
-            cmd_id = 50
-            print "[%s] << %d %s" % (datetime.datetime.now(), cmd_id, resp_cmd)
-            output = struct.pack("BBHH", cmd_id, Tools.COMMANDS[resp_cmd], x, y)
-            sock.sendall(output)
+    if run:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                run = False
+                break
+            elif event.type == pygame.MOUSEBUTTONUP:
+                x, y = event.pos
+                resp_cmd = "click"
+                #TODO improve
+                cmd_id = 50
+                print "[%s] << %d %s" % (datetime.datetime.now(), cmd_id, resp_cmd)
+                output = struct.pack("BBHH", cmd_id, Tools.COMMANDS[resp_cmd], x, y)
+                sock.sendall(output)
 
