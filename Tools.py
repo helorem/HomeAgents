@@ -8,6 +8,9 @@ COMMANDS = {
     "send_palet" : 0x07
 }
 
+C_NONE = 0x00
+C_RLE = 0x01
+
 def str_to_hex2(val):
     res = []
     line = []

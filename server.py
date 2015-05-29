@@ -208,11 +208,47 @@ def send_img(server, id, filename):
 
     server.clients[id].send_command("send_palet", args=args, callback=print_cb)
 
-    args = struct.pack("HHHH%s" % ("B" * pixels_size), 0, 0, w, h, *pixels)
+    args = struct.pack("HHHHB%s" % ("B" * pixels_size), 0, 0, w, h, Tools.C_NONE, *pixels)
     print "len pixels : %d" % pixels_size
     print "len args : %d" % len(args)
 
     server.clients[id].send_command("draw_pixels", args=args, callback=print_cb)
+
+    time.sleep(2)
+
+    #use RLE
+    pixels = compress_rle(pixels)
+    pixels_size = len(pixels)
+
+    args = struct.pack("HHHHB%s" % ("B" * pixels_size), 0, 0, w, h, Tools.C_RLE, *pixels)
+    print "len pixels : %d" % pixels_size
+    print "len args : %d" % len(args)
+
+    server.clients[id].send_command("draw_pixels", args=args, callback=print_cb)
+
+#TEST FCT
+def compress_rle(pixels):
+    res = []
+    count = 0
+    val = None
+    for pix in pixels:
+        if val != pix:
+            if count:
+                res.append(count)
+                res.append(val)
+            val = pix
+            count = 1
+        else:
+            count += 1
+            if count >= 255:
+                res.append(count)
+                res.append(val)
+                count = 0
+    if count:
+        res.append(count)
+        res.append(val)
+
+    return res
 
 def print_cb(data):
     cmd, args = data

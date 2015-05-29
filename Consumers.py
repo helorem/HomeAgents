@@ -103,10 +103,10 @@ class PixelConsumer(BaseConsumer):
         self.add_listener("end", self.on_end)
 
     def read_header(self, data):
-        header_size = 8
+        header_size = 9
         res = False
         if len(data) >= header_size:
-            self.x, self.y, self.w, self.h, = struct.unpack("HHHH", data[0:header_size])
+            self.x, self.y, self.w, self.h, self.compression = struct.unpack("HHHHB", data[0:header_size])
             self.buffer_size = self.w * self.h
             self.header_readed = True
             data = data[header_size:]
@@ -117,9 +117,24 @@ class PixelConsumer(BaseConsumer):
 
     def consume_process(self, data):
         args = struct.unpack("%s" % ("B" * len(data)), data)
-        for item in args:
-            self.process_item(self.offset, item)
-            self.offset += 1
+        if self.compression & Tools.C_RLE:
+            if len(data) % 2 != 0:
+                self.overflow = data[-1:] + self.overflow
+                data[0:-1]
+            count = 0
+            val = None
+            for i in xrange(0, len(args)):
+                if i % 2 == 0:
+                    count = args[i]
+                else:
+                    val = args[i]
+                    for j in xrange(0, count):
+                        self.process_item(self.offset, val)
+                        self.offset += 1
+        else:
+            for item in args:
+                self.process_item(self.offset, item)
+                self.offset += 1
 
     def on_end(self, consumer):
         resp_cmd = "ack"
