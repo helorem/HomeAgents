@@ -5,7 +5,8 @@ COMMANDS = {
     "description" : 0x04,
     "ack" : 0x05,
     "draw_pixels" : 0x06,
-    "send_palet" : 0x07
+    "send_palet" : 0x07,
+    "click" : 0x08
 }
 
 C_NONE = 0x00
@@ -39,6 +40,12 @@ def str_to_hex2(val):
             line2.append("  ")
             line.append(" ")
     if line:
+        for k in xrange(j, 32):
+            line2.append(" ")
+            line.append("   ")
+            if k % 8 == 0 and k < 32:
+                line2.append("  ")
+                line.append(" ")
         res.append("%.3d  " % l)
         res += line
         res.append("  ")

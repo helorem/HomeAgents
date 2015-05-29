@@ -42,12 +42,15 @@ class BaseConsumer():
             cmd_id, cmd = struct.unpack("BB", data[0:2])
             if cmd == self.cmd_num:
                 self.cmd_id = cmd_id
+                self.overflow = ""
                 self.consume(data[2:])
                 data = self.overflow
                 res = True
         return (res, data)
 
     def consume(self, data):
+        print self.command
+
         data = self.overflow + data
         self.overflow = ""
 
@@ -80,7 +83,6 @@ class BaseConsumer():
     def end(self):
         self.buffer_size = 0
         self.offset = 0
-        self.overflow = ""
         self.header_readed = False
         for callback, param in self.callbacks["end"]:
             if param:
@@ -101,13 +103,13 @@ class PixelConsumer(BaseConsumer):
         BaseConsumer.__init__(self, "draw_pixels")
         self.palet = None
         self.add_listener("end", self.on_end)
+        self.real_offset = 0 #used in case a compression
 
     def read_header(self, data):
-        header_size = 9
+        header_size = 13
         res = False
         if len(data) >= header_size:
-            self.x, self.y, self.w, self.h, self.compression = struct.unpack("HHHHB", data[0:header_size])
-            self.buffer_size = self.w * self.h
+            self.x, self.y, self.w, self.buffer_size, self.compression = struct.unpack("HHHIB", data[0:header_size])
             self.header_readed = True
             data = data[header_size:]
             res = True
@@ -118,9 +120,9 @@ class PixelConsumer(BaseConsumer):
     def consume_process(self, data):
         args = struct.unpack("%s" % ("B" * len(data)), data)
         if self.compression & Tools.C_RLE:
-            if len(data) % 2 != 0:
+            if len(args) % 2 != 0:
                 self.overflow = data[-1:] + self.overflow
-                data[0:-1]
+                args = args[0:-1]
             count = 0
             val = None
             for i in xrange(0, len(args)):
@@ -129,14 +131,16 @@ class PixelConsumer(BaseConsumer):
                 else:
                     val = args[i]
                     for j in xrange(0, count):
-                        self.process_item(self.offset, val)
-                        self.offset += 1
+                        self.process_item(self.real_offset, val)
+                        self.real_offset += 1
+                self.offset += 1
         else:
             for item in args:
                 self.process_item(self.offset, item)
                 self.offset += 1
 
     def on_end(self, consumer):
+        self.real_offset = 0
         resp_cmd = "ack"
         print "[%s] << %d %s" % (datetime.datetime.now(), consumer.cmd_id, resp_cmd)
         consumer.output = struct.pack("BB", consumer.cmd_id, Tools.COMMANDS[resp_cmd])

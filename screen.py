@@ -3,52 +3,12 @@ import socket
 import threading
 import select
 import datetime
+import struct
 
 import Tools
 import Consumers
 
 CONSUMERS = []
-
-def str_to_hex2(val):
-    res = []
-    line = []
-    line2 = []
-    j = 0
-    l = 0
-    for i in val:
-        ch = i
-        if ord(ch) < 0x20 or ord(ch) > 0x7E:
-            ch = "."
-        line2.append(ch)
-        hex_val = hex(ord(i)).replace("0x", "").zfill(2).upper()
-        line.append(hex_val + " ")
-        j += 1
-        if j >= 32:
-            res.append("%.3d  " % l)
-            res += line
-            res.append("  ")
-            res += line2
-            res.append("\n")
-            line = []
-            line2 = []
-            j = 0
-            l += 32
-        elif j % 8 == 0:
-            line2.append("  ")
-            line.append(" ")
-    if line:
-        res.append("%.3d  " % l)
-        res += line
-        res.append("  ")
-        res += line2
-        res.append("\n")
-    return "".join(res)
-
-def str_to_hex(val):
-    res = []
-    for i in val:
-        res.append(hex(ord(i)).replace("0x", "").zfill(2).upper())
-    return " ".join(res)
 
 def on_cmd_ping(consumer):
     resp_cmd = "pong"
@@ -77,7 +37,6 @@ def rep(data, sock):
 def on_new_palet(consumer, param):
     pixel_consumer = param
     pixel_consumer.palet = consumer.palet
-
 
 def on_draw_pixel(consumer, index, val):
     global screen
@@ -122,7 +81,7 @@ port=7654
 
 POLL_ERR = (select.POLLERR | select.POLLHUP | select.POLLNVAL)
 POLL_READ = (select.POLLIN | select.POLLPRI)
-TIMEOUT = 100000
+TIMEOUT = 0.0001
 
 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 sock.connect((master, port))
@@ -154,5 +113,12 @@ while run:
         if event.type == pygame.QUIT:
             run = False
             break
-
+        elif event.type == pygame.MOUSEBUTTONUP:
+            x, y = event.pos
+            resp_cmd = "click"
+            #TODO improve
+            cmd_id = 50
+            print "[%s] << %d %s" % (datetime.datetime.now(), cmd_id, resp_cmd)
+            output = struct.pack("BBHH", cmd_id, Tools.COMMANDS[resp_cmd], x, y)
+            sock.sendall(output)
 

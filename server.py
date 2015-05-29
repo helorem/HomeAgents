@@ -66,19 +66,19 @@ class Client(threading.Thread):
     def on_receive(self, data):
         cmd_id, cmd = struct.unpack("BB", data[0:2])
         cmd = self.__get_command_by_num(cmd)
-        args = None
-        if len(data) > 2:
-            args = data[2:]
+        data = data[2:]
 
         self.last_heartbeat = time.time()
+
+        self.server.call_listeners(self, cmd, data)
 
         if cmd_id in self.commands:
             callback, callback_params = self.commands[cmd_id]
             if callback:
                 if callback_params:
-                    callback((cmd, args), callback_params)
+                    callback((cmd, data), callback_params)
                 else:
-                    callback((cmd, args))
+                    callback((cmd, data))
             del self.commands[cmd_id]
 
     def on_disconnected(self):
@@ -133,10 +133,24 @@ class Server(threading.Thread):
         self.port = port
         self.is_running = False
         self.clients = {}
+        self.listeners = {}
 
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.sock.settimeout(1.0)
+
+    def add_listener(self, command, callback, params=None):
+        if not command in self.listeners:
+            self.listeners[command] = []
+        self.listeners[command].append((callback, params))
+
+    def call_listeners(self, client, command, data):
+        if command in self.listeners:
+            for callback, params in self.listeners[command]:
+                if params:
+                    callback(client, data, params)
+                else:
+                    callback(client, data)
 
     def run(self):
         self.sock.bind((self.host, self.port))
@@ -155,7 +169,7 @@ class Server(threading.Thread):
                     client.start()
                     #TODO remove ############################
                     time.sleep(1)
-                    send_img(self, id, "tst.png")
+                    send_img(self, id, "off.png")
                     ########################################
                 except socket.timeout:
                     pass
@@ -171,6 +185,9 @@ class Server(threading.Thread):
             client.stop()
             del self.clients[id]
             print "Client %s disconnected" % id
+            #TODO remove #############
+            global actual_img
+            actual_img = None
 
     def stop(self):
         self.is_running = False
@@ -183,11 +200,26 @@ class Server(threading.Thread):
             self.clients[id].send_command(cmd, args=args, callback=callback)
 
 #TEST FCT
+actual_img = None
 def send_img(server, id, filename):
-    print "send_img"
-    im = Image.open("tst.png")
+    global actual_img
+
+    print "send_img", filename
+
+    im = Image.open(filename)
     rgb_im = im.convert("RGB")
     w, h = im.size
+
+    rect = (0, 0, w, h)
+    if actual_img:
+        rect = img_diff(filename, actual_img)
+    actual_img = filename
+    w = rect[2] - rect[0]
+    h = rect[3] - rect[1]
+
+    print "rect:", rect, w, h
+    rgb_im = rgb_im.crop(rect)
+
     pixels = []
     palet = []
 
@@ -208,23 +240,50 @@ def send_img(server, id, filename):
 
     server.clients[id].send_command("send_palet", args=args, callback=print_cb)
 
-    args = struct.pack("HHHHB%s" % ("B" * pixels_size), 0, 0, w, h, Tools.C_NONE, *pixels)
-    print "len pixels : %d" % pixels_size
-    print "len args : %d" % len(args)
-
-    server.clients[id].send_command("draw_pixels", args=args, callback=print_cb)
-
-    time.sleep(2)
+    compress = Tools.C_NONE
 
     #use RLE
+    compress = Tools.C_RLE
     pixels = compress_rle(pixels)
     pixels_size = len(pixels)
 
-    args = struct.pack("HHHHB%s" % ("B" * pixels_size), 0, 0, w, h, Tools.C_RLE, *pixels)
+    args = struct.pack("HHHIB%s" % ("B" * pixels_size), rect[0], rect[1], w, pixels_size, compress, *pixels)
     print "len pixels : %d" % pixels_size
     print "len args : %d" % len(args)
+    print "size :", pixels_size, w * h
 
     server.clients[id].send_command("draw_pixels", args=args, callback=print_cb)
+
+#TEST FCT
+def img_diff(img1, img2):
+    im = Image.open(img1)
+    rgb_im1 = im.convert("RGB")
+    w, h = im.size
+
+    im = Image.open(img2)
+    rgb_im2 = im.convert("RGB")
+
+    min_y = h
+    max_y = 0
+    min_x = w
+    max_x = 0
+    for y in xrange(0, h):
+        for x in xrange(0, w):
+            pix1 = rgb_im1.getpixel((x, y))
+            pix2 = rgb_im2.getpixel((x, y))
+            if pix1 != pix2:
+                if y < min_y:
+                    min_y = y
+                if y > max_y:
+                    max_y = y
+                if x < min_x:
+                    min_x = x
+                if x > max_x:
+                    max_x = x
+    if min_x > max_x or min_y > max_y:
+        return None
+    return (min_x, min_y, max_x, max_y)
+
 
 #TEST FCT
 def compress_rle(pixels):
@@ -254,10 +313,21 @@ def print_cb(data):
     cmd, args = data
     print ">> %s %s" % (cmd, args)
 
+def on_click(client, data):
+    global actual_img
+
+    x, y = struct.unpack("HH", data[0:4])
+    print ">> click %d:%d" % (x, y)
+    if actual_img == "off.png":
+        send_img(client.server, client.id, "on.png")
+    else:
+        send_img(client.server, client.id, "off.png")
+
 host = "0.0.0.0"
 port = 7654
 
 server = Server(host, port)
+server.add_listener("click", on_click)
 server.start()
 
 import Image
@@ -270,10 +340,7 @@ try:
                 print "[client ip] [command]"
             else:
                 id, data = data.split(" ", 1)
-                if data == "draw_pixels":
-                    send_img(server, id, "tst.png")
-                else:
-                    server.send_command(id, data, print_cb)
+                server.send_command(id, data, print_cb)
 except KeyboardInterrupt:
     print "\nOVER"
 finally:
