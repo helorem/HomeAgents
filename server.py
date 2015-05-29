@@ -70,7 +70,7 @@ class Client(threading.Thread):
 
         self.last_heartbeat = time.time()
 
-        self.server.call_listeners(self, cmd, data)
+        self.server.call_command_listeners(self, cmd, data)
 
         if cmd_id in self.commands:
             callback, callback_params = self.commands[cmd_id]
@@ -133,20 +133,36 @@ class Server(threading.Thread):
         self.port = port
         self.is_running = False
         self.clients = {}
-        self.listeners = {}
+        self.listeners = {
+            "connect" : [],
+            "disconnect" : []
+        }
+        self.command_listeners = {}
 
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.sock.settimeout(1.0)
 
-    def add_listener(self, command, callback, params=None):
-        if not command in self.listeners:
-            self.listeners[command] = []
-        self.listeners[command].append((callback, params))
+    def add_listener(self, event, callback, params=None):
+        if event in self.listeners:
+            self.listeners[event].append((callback, params))
 
-    def call_listeners(self, client, command, data):
-        if command in self.listeners:
-            for callback, params in self.listeners[command]:
+    def call_listeners(self, event, data):
+        if event in self.listeners:
+            for callback, params in self.listeners[event]:
+                if params:
+                    callback(data, params)
+                else:
+                    callback(data)
+
+    def add_command_listener(self, command, callback, params=None):
+        if not command in self.listeners:
+            self.command_listeners[command] = []
+        self.command_listeners[command].append((callback, params))
+
+    def call_command_listeners(self, client, command, data):
+        if command in self.command_listeners:
+            for callback, params in self.command_listeners[command]:
                 if params:
                     callback(client, data, params)
                 else:
@@ -163,14 +179,10 @@ class Server(threading.Thread):
                 try:
                     (clientsock, (ip, port)) = self.sock.accept()
                     id = "%s:%d" % (ip, port)
-                    print "Client %s connected" % id
                     client = Client(clientsock, id, self)
                     self.clients[id] = client
                     client.start()
-                    #TODO remove ############################
-                    time.sleep(1)
-                    send_img(self, id, "off.png")
-                    ########################################
+                    self.call_listeners("connect", client)
                 except socket.timeout:
                     pass
         finally:
@@ -182,26 +194,29 @@ class Server(threading.Thread):
     def remove_client(self, id):
         if id in self.clients:
             client = self.clients[id]
+            self.call_listeners("disconnect", client)
             client.stop()
             del self.clients[id]
-            print "Client %s disconnected" % id
-            #TODO remove #############
-            global actual_img
-            actual_img = None
 
     def stop(self):
         self.is_running = False
 
-    def send_command(self, id, cmd, callback):
-        if id in self.clients:
-            args = None
-            if " " in cmd:
-                cmd, args = cmd.split(" ", 1)
-            self.clients[id].send_command(cmd, args=args, callback=callback)
+
+#TEST FCT
+def on_connect(client):
+    print "Client %s is connected" % client.id
+    time.sleep(1)
+    send_img(client, "off.png")
+
+#TEST FCT
+def on_disconnect(client):
+    print "Client %s is disconnected" % client.id
+    global actual_img
+    actual_img = None
 
 #TEST FCT
 actual_img = None
-def send_img(server, id, filename):
+def send_img(client, filename):
     global actual_img
 
     print "send_img", filename
@@ -238,7 +253,7 @@ def send_img(server, id, filename):
     print "len palet : %d" % palet_size
     print "len args : %d" % len(args)
 
-    server.clients[id].send_command("send_palet", args=args, callback=print_cb)
+    client.send_command("send_palet", args=args, callback=print_cb)
 
     compress = Tools.C_NONE
 
@@ -252,7 +267,7 @@ def send_img(server, id, filename):
     print "len args : %d" % len(args)
     print "size :", pixels_size, w * h
 
-    server.clients[id].send_command("draw_pixels", args=args, callback=print_cb)
+    client.send_command("draw_pixels", args=args, callback=print_cb)
 
 #TEST FCT
 def img_diff(img1, img2):
@@ -319,28 +334,24 @@ def on_click(client, data):
     x, y = struct.unpack("HH", data[0:4])
     print ">> click %d:%d" % (x, y)
     if actual_img == "off.png":
-        send_img(client.server, client.id, "on.png")
+        send_img(client, "on.png")
     else:
-        send_img(client.server, client.id, "off.png")
+        send_img(client, "off.png")
 
 host = "0.0.0.0"
 port = 7654
 
 server = Server(host, port)
-server.add_listener("click", on_click)
+server.add_command_listener("click", on_click)
+server.add_listener("connect", on_connect)
+server.add_listener("disconnect", on_disconnect)
 server.start()
 
 import Image
 
 try:
     while True:
-        data = raw_input()
-        if data:
-            if data == "help":
-                print "[client ip] [command]"
-            else:
-                id, data = data.split(" ", 1)
-                server.send_command(id, data, print_cb)
+        time.sleep(1)
 except KeyboardInterrupt:
     print "\nOVER"
 finally:
