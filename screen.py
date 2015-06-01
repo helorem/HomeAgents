@@ -45,7 +45,16 @@ def on_draw_pixel(consumer, index, val):
         x = consumer.x + (index % consumer.w)
         y = consumer.y + (index / consumer.w)
         color = consumer.palet[val]
+        color = decode_color565(color)
         screen.set_at((x, y), color)
+
+#TEST FCT
+def decode_color565(color):
+    r = (color >> 8) & 0xF8
+    g = (color >> 3) & 0xFC
+    b = (color << 3) & 0xFF
+
+    return (r, g, b);
 
 def on_draw_end(consumer):
     pygame.display.flip()

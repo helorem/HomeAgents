@@ -261,7 +261,7 @@ def send_img(client, filename):
         for y in xrange(0, h):
             for x in xrange(0, w):
                 r, g, b = rgb_im.getpixel((x, y))
-                color = struct.pack("BBB", (r & 0xFF), (g & 0xFF), (b & 0xFF))
+                color = encode_color565(r, g, b)
                 if color not in palet:
                     palet.append(color)
                 pixels.append(palet.index(color))
@@ -278,7 +278,7 @@ def send_img(client, filename):
 
     actual_img = filename
 
-    args = struct.pack("H%s" % ("3s" * palet_size), palet_size, *palet)
+    args = struct.pack("H%s" % ("H" * palet_size), palet_size, *palet)
     print "len palet : %d" % palet_size
     print "len args : %d" % len(args)
 
@@ -290,6 +290,10 @@ def send_img(client, filename):
     print "len args : %d" % len(args)
 
     client.send_command("draw_pixels", args=args, callback=print_cb)
+
+#TEST FCT
+def encode_color565(r, g, b):
+    return ((r & 0xF8) << 8) | ((g & 0xFC) << 3) | (b >> 3);
 
 #TEST FCT
 def img_diff(img1, img2):

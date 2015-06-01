@@ -149,7 +149,7 @@ class PixelConsumer(BaseConsumer):
 
 class PaletConsumer(BaseConsumer):
     def __init__(self):
-        BaseConsumer.__init__(self, "send_palet", 3)
+        BaseConsumer.__init__(self, "send_palet", 2)
         self.palet = []
         self.add_listener("end", self.on_end)
         self.add_listener("process_item", self.on_process_item)
@@ -168,17 +168,14 @@ class PaletConsumer(BaseConsumer):
         return (res, data)
 
     def consume_process(self, data):
-        nb_items = len(data) / 3
-        count_elm = nb_items * 3
+        nb_items = len(data) / self.buffer_item_size
+        count_elm = nb_items * self.buffer_item_size
         if count_elm < len(data):
             self.overflow = data[count_elm:] + self.overflow
             data = data[0:count_elm]
-        args = struct.unpack("%s" % ("3s" * nb_items), data)
+        args = struct.unpack("%s" % ("H" * nb_items), data)
         for item in args:
-            r = ord(item[0])
-            g = ord(item[1])
-            b = ord(item[2])
-            self.process_item(self.offset, (r, g, b))
+            self.process_item(self.offset, item)
             self.offset += 1
 
     def on_end(self, consumer):
