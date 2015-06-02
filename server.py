@@ -64,7 +64,7 @@ class Client(threading.Thread):
         self.write_queue.put(data)
 
     def on_receive(self, data):
-        cmd_id, cmd = struct.unpack("BB", data[0:2])
+        cmd, cmd_id = struct.unpack("BB", data[0:2])
         cmd = self.__get_command_by_num(cmd)
         data = data[2:]
 
@@ -118,12 +118,12 @@ class Client(threading.Thread):
         self.commands[cmd_id] = (callback, param)
         if args:
             if args:
-                to_write = struct.pack("BB", cmd_id, Tools.COMMANDS[command])
+                to_write = struct.pack("BB", Tools.COMMANDS[command], cmd_id)
                 to_write = "%s%s" % (to_write, args)
                 #print Tools.str_to_hex2(to_write)
                 self.write(to_write)
         else:
-            to_write = struct.pack("BB", cmd_id, Tools.COMMANDS[command])
+            to_write = struct.pack("BB", Tools.COMMANDS[command], cmd_id)
             self.write(to_write)
 
 
@@ -368,7 +368,7 @@ def on_click(client, data):
 
 def on_description(data, client):
     print ">> description %s" % (data,)
-    send_img(client, "off.png")
+    #send_img(client, "off.png")
 
 host = "0.0.0.0"
 port = 7654
