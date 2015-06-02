@@ -24,6 +24,12 @@ struct msg_base
     uint8     cmd_id;
 };
 
+struct msg_palet
+{
+    struct msg_base     base;
+    uint8               size;
+};
+
 struct msg_description
 {
     struct msg_base     base;

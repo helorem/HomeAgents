@@ -14,6 +14,8 @@
 #include <fcntl.h>
 
 #include "WhoIsConsumer.hpp"
+#include "PingConsumer.hpp"
+#include "PaletConsumer.hpp"
 
 const int SCREEN_WIDTH = 240;
 const int SCREEN_HEIGHT = 320;
@@ -116,6 +118,12 @@ int initNetwork()
     WhoIsConsumer cons1 = WhoIsConsumer();
     consumers[idx++] = &cons1;
 
+    PingConsumer cons2 = PingConsumer();
+    consumers[idx++] = &cons1;
+
+    PaletConsumer cons3 = PaletConsumer();
+    consumers[idx++] = &cons3;
+
     consumers[idx] = NULL;
 
 
@@ -124,12 +132,10 @@ int initNetwork()
     std::cout << "read..." << std::endl;
     while ((n = read(sockfd, &recv, sizeof(recv))) > 0)
     {
-        std::cout << "Recv " << n << std::endl;
         for (unsigned int i = 0; consumers[i] != NULL; ++i)
         {
             if (consumers[i]->consume(recv))
             {
-                std::cout << "consumed " << i << " " << consumers[i]->remaining << std::endl;
                 break;
             }
         }

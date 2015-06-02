@@ -8,20 +8,8 @@ BaseConsumer::BaseConsumer(uint8 cmd) :
     buffer_size(0),
     buffer(NULL),
     buffer_index(0),
-    base_header_allocated()
-{
-    base_header_allocated.cmd = cmd;
-}
-
-BaseConsumer::BaseConsumer(uint8 cmd, uint8 header_size, uint8* header) :
-    header_size(header_size),
-    header(header),
-    state(CONSUMER_STATE_WAITING),
-    remaining(0),
-    buffer_size(0),
-    buffer(NULL),
-    buffer_index(0),
-    base_header_allocated()
+    base_header_allocated(),
+    index(0)
 {
     base_header_allocated.cmd = cmd;
 }
@@ -34,14 +22,10 @@ BaseConsumer::BaseConsumer(uint8 cmd, uint8 header_size, uint8* header, uint8 bu
     buffer_size(buffer_size),
     buffer(buffer),
     buffer_index(0),
-    base_header_allocated()
+    base_header_allocated(),
+    index(0)
 {
     base_header_allocated.cmd = cmd;
-}
-
-void BaseConsumer::end()
-{
-    //TODO send ACK
 }
 
 uint16 BaseConsumer::parseHeader()
@@ -49,7 +33,7 @@ uint16 BaseConsumer::parseHeader()
     return 0;
 }
 
-void BaseConsumer::proceed_item(uint8* buffer)
+void BaseConsumer::proceed_item(uint8* buffer, uint16 index)
 {
 }
 
@@ -83,8 +67,9 @@ bool BaseConsumer::consume(uint8 data)
                 ++(this->buffer_index);
                 if (this->buffer_index == this->buffer_size)
                 {
-                    this->proceed_item(this->buffer);
+                    this->proceed_item(this->buffer, this->index);
                     this->buffer_index = 0;
+                    ++this->index;
                 }
                 if (this->remaining == 0)
                 {
@@ -98,6 +83,7 @@ bool BaseConsumer::consume(uint8 data)
     else if (data == this->base_header_allocated.cmd)
     {
         this->remaining = this->header_size - 1;
+        this->index = 0;
         if (this->remaining > 0)
         {
             this->state = CONSUMER_STATE_READ_HEADER;

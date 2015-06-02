@@ -284,6 +284,9 @@ def send_img(client, filename):
 
     client.send_command("send_palet", args=args, callback=print_cb)
 
+    #TODO
+    return
+
     w = rect[2] - rect[0]
     args = struct.pack("HHHIB%s" % ("B" * pixels_size), rect[0], rect[1], w, pixels_size, Tools.C_RLE, *pixels)
     print "len pixels : %d" % pixels_size
@@ -368,7 +371,7 @@ def on_click(client, data):
 
 def on_description(data, client):
     print ">> description %s" % (data,)
-    #send_img(client, "off.png")
+    send_img(client, "off.png")
 
 host = "0.0.0.0"
 port = 7654
