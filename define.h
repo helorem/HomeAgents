@@ -18,6 +18,7 @@
 #define CONSUMER_STATE_READ_HEADER  0x01
 #define CONSUMER_STATE_READ_DATA    0x02
 
+#pragma pack(push, 1)
 struct msg_base
 {
     uint8     cmd;
@@ -27,7 +28,25 @@ struct msg_base
 struct msg_palet
 {
     struct msg_base     base;
-    uint8               size;
+    uint16              size;
+};
+
+struct msg_pixels
+{
+    struct msg_base     base;
+    uint16              x;
+    uint16              y;
+    uint16              w;
+    uint8               _pad[2]; //TODO correct it in the server
+    uint32              size;
+    uint8               mode;
+};
+
+struct msg_click
+{
+    struct msg_base     base;
+    uint16              x;
+    uint16              y;
 };
 
 struct msg_description
@@ -36,5 +55,6 @@ struct msg_description
     char                name[16];
     char                version[6];
 };
+#pragma pack(pop)
 
 #endif

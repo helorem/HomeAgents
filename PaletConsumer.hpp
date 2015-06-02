@@ -4,9 +4,6 @@
 #include "BaseConsumer.h"
 #include  "functions.hpp"
 
-//TODO remove
-#include <iostream>
-
 class PaletConsumer : public BaseConsumer
 {
     private:
@@ -23,19 +20,22 @@ class PaletConsumer : public BaseConsumer
             socket_send((uint8*)&res, sizeof(res));
         }
 
-        virtual uint16 parseHeader()
+        virtual uint32 parseHeader()
         {
             return this->alloc_header.size * sizeof(this->alloc_buffer);
         }
 
-        virtual void proceed_item(uint8* buffer, uint16 index)
+        virtual void proceed_item(uint8* buffer, uint32 index)
         {
             this->palet[index] = *((uint16*)buffer);
-            std::cout << "set palet : " << index << " = " << this->palet[index] << std::endl;
         }
 
     public:
         PaletConsumer() : BaseConsumer(CMD_SET_PALET, sizeof(this->alloc_header), (uint8 *)&(this->alloc_header), sizeof(this->alloc_buffer), (uint8 *)&(this->alloc_buffer)) {}
+        uint16 getColor(uint8 index) const
+        {
+            return this->palet[index];
+        }
 };
 
 #endif

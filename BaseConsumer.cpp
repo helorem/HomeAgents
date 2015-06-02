@@ -28,12 +28,12 @@ BaseConsumer::BaseConsumer(uint8 cmd, uint8 header_size, uint8* header, uint8 bu
     base_header_allocated.cmd = cmd;
 }
 
-uint16 BaseConsumer::parseHeader()
+uint32 BaseConsumer::parseHeader()
 {
     return 0;
 }
 
-void BaseConsumer::proceed_item(uint8* buffer, uint16 index)
+void BaseConsumer::proceed_item(uint8* buffer, uint32 index)
 {
 }
 

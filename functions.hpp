@@ -3,6 +3,8 @@
 
 #include "types.h"
 
+void drawEnd();
+void drawPixel(int x, int y, uint16 color565);
 void socket_send(const uint8* data, uint16 data_size);
 
 void m_strcpy(char* dest, const char* source, uint8 size)

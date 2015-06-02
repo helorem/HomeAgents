@@ -48,6 +48,9 @@ class Client(threading.Thread):
                     self.on_receive("".join(data))
                 if not self.write_queue.empty():
                     data = self.write_queue.get()
+
+                    print Tools.str_to_hex2(data)
+
                     self.sock.sendall(data)
                 else:
                     self.check_alive()
@@ -120,7 +123,6 @@ class Client(threading.Thread):
             if args:
                 to_write = struct.pack("BB", Tools.COMMANDS[command], cmd_id)
                 to_write = "%s%s" % (to_write, args)
-                #print Tools.str_to_hex2(to_write)
                 self.write(to_write)
         else:
             to_write = struct.pack("BB", Tools.COMMANDS[command], cmd_id)
@@ -281,11 +283,9 @@ def send_img(client, filename):
     args = struct.pack("H%s" % ("H" * palet_size), palet_size, *palet)
     print "len palet : %d" % palet_size
     print "len args : %d" % len(args)
+    print "first color=", palet[0], " ", decode_color565(palet[0])
 
     client.send_command("send_palet", args=args, callback=print_cb)
-
-    #TODO
-    return
 
     w = rect[2] - rect[0]
     args = struct.pack("HHHIB%s" % ("B" * pixels_size), rect[0], rect[1], w, pixels_size, Tools.C_RLE, *pixels)
@@ -293,6 +293,14 @@ def send_img(client, filename):
     print "len args : %d" % len(args)
 
     client.send_command("draw_pixels", args=args, callback=print_cb)
+
+#TEST FCT
+def decode_color565(color):
+    r = (color >> 8) & 0xF8
+    g = (color >> 3) & 0xFC
+    b = (color << 3) & 0xFF
+
+    return (r, g, b);
 
 #TEST FCT
 def encode_color565(r, g, b):

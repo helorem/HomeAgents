@@ -16,6 +16,9 @@
 #include "WhoIsConsumer.hpp"
 #include "PingConsumer.hpp"
 #include "PaletConsumer.hpp"
+#include "PixelConsumer.hpp"
+
+#include "functions.hpp"
 
 const int SCREEN_WIDTH = 240;
 const int SCREEN_HEIGHT = 320;
@@ -54,6 +57,15 @@ int sdl_thread(void *data)
                     {
                         quit = true;
                     }
+                    else if (event.type == SDL_MOUSEBUTTONDOWN)
+                    {
+                        struct msg_click res;
+                        res.base.cmd = CMD_CLICK;
+                        res.base.cmd_id = 50; //TODO improve
+                        res.x = event.button.x;
+                        res.y = event.button.y;
+                        socket_send((uint8*)&res, sizeof(res));
+                    }
                 }
             }
         }
@@ -65,7 +77,16 @@ int sdl_thread(void *data)
     return 0;
 }
 
-void drawPixel(int x, int y, Uint32 color)
+uint32 convert_565(uint16 color)
+{
+    uint8 r = (color >> 8) & 0xF8;
+    uint8 g = (color >> 3) & 0xFC;
+    uint8 b = (color << 3) & 0xFF;
+
+    return r << 16 | g << 8 | b;
+}
+
+void drawPixel2(int x, int y, uint8 r, uint8 g, uint8 b)
 {
 
     SDL_Rect rect;
@@ -74,7 +95,21 @@ void drawPixel(int x, int y, Uint32 color)
     rect.w = 1;
     rect.h = 1;
 
-    SDL_FillRect( screenSurface, &rect, SDL_MapRGB( screenSurface->format, (color >> 16) & 0xff, (color >> 8) & 0xff, color & 0xff ) );
+    SDL_FillRect( screenSurface, &rect, SDL_MapRGB( screenSurface->format, r, g, b ) );
+}
+
+void drawPixel(int x, int y, uint16 color565)
+{
+
+    uint32 color = convert_565(color565);
+
+    uint8 r = (color565 >> 8) & 0xF8;
+    uint8 g = (color565 >> 3) & 0xFC;
+    uint8 b = (color565 << 3) & 0xFF;
+
+    std::cout << std::dec << "pixel " << x << "," << y << " " << std::hex << (int)color565 << "=>" << std::dec << (int)r << " " << (int)g << " " << (int)b << std::dec << std::endl;
+
+    drawPixel2(x, y, r, g, b);
 }
 
 void drawEnd()
@@ -124,6 +159,10 @@ int initNetwork()
     PaletConsumer cons3 = PaletConsumer();
     consumers[idx++] = &cons3;
 
+    PixelConsumer cons4 = PixelConsumer();
+    cons4.setPalet(&cons3);
+    consumers[idx++] = &cons4;
+
     consumers[idx] = NULL;
 
 
@@ -132,10 +171,17 @@ int initNetwork()
     std::cout << "read..." << std::endl;
     while ((n = read(sockfd, &recv, sizeof(recv))) > 0)
     {
+        //std::cout << ":" << std::hex << (int)recv << std::dec << std::endl;
         for (unsigned int i = 0; consumers[i] != NULL; ++i)
         {
             if (consumers[i]->consume(recv))
             {
+                if (i != 0)
+                {
+                    BaseConsumer* tmp = consumers[0];
+                    consumers[0] = consumers[i];
+                    consumers[i] = tmp;
+                }
                 break;
             }
         }
