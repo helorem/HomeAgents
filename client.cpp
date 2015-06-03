@@ -18,6 +18,7 @@
 #include "PaletConsumer.hpp"
 #include "PixelConsumer.hpp"
 #include "FillConsumer.hpp"
+#include "RepeatXConsumer.hpp"
 
 #include "functions.hpp"
 
@@ -190,6 +191,10 @@ int initNetwork()
 
     FillConsumer cons5 = FillConsumer();
     consumers[idx++] = &cons5;
+
+    RepeatXConsumer cons6 = RepeatXConsumer();
+    cons6.setPalet(&cons3);
+    consumers[idx++] = &cons6;
 
     consumers[idx] = NULL;
 

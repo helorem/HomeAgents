@@ -1,11 +1,11 @@
-#ifndef __PixelConsumer_h__
-#define __PixelConsumer_h__
+#ifndef __RepeatXConsumer_h__
+#define __RepeatXConsumer_h__
 
 #include "BaseConsumer.h"
 #include "functions.hpp"
 #include "PaletConsumer.hpp"
 
-class PixelConsumer : public BaseConsumer
+class RepeatXConsumer : public BaseConsumer
 {
     private:
         struct msg_pixels alloc_header;
@@ -37,15 +37,17 @@ class PixelConsumer : public BaseConsumer
             uint16 color = this->palet_cons->getColor(buffer[1]);
             for (uint16 i = 0; i < buffer[0]; ++i)
             {
-                x2 = this->real_index % this->alloc_header.w;
-                y2 = this->real_index / this->alloc_header.w;
-                drawPixel(this->alloc_header.x + x2, this->alloc_header.y + y2, color);
+                y2 = this->real_index;
+                for (uint16 x2 = 0; x2 < this->alloc_header.w; ++x2)
+                {
+                    drawPixel(this->alloc_header.x + x2, this->alloc_header.y + y2, color);
+                }
                 ++(this->real_index);
             }
         }
 
     public:
-        PixelConsumer() : BaseConsumer(CMD_DRAW_PIXELS, sizeof(this->alloc_header), (uint8 *)&(this->alloc_header), sizeof(this->alloc_buffer), (uint8 *)&(this->alloc_buffer)), real_index(0) {}
+        RepeatXConsumer() : BaseConsumer(CMD_REPEAT_X, sizeof(this->alloc_header), (uint8 *)&(this->alloc_header), sizeof(this->alloc_buffer), (uint8 *)&(this->alloc_buffer)), real_index(0) {}
         void setPalet(PaletConsumer* palet_cons)
         {
             this->palet_cons = palet_cons;

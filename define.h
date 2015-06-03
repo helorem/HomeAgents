@@ -16,6 +16,7 @@
 #define CMD_TOUCH_UP    0x09
 #define CMD_TOUCH_MOVE  0x0A
 #define CMD_FILL_COLOR  0x0B
+#define CMD_REPEAT_X    0x0C
 
 #define CONSUMER_STATE_WAITING      0x00
 #define CONSUMER_STATE_READ_HEADER  0x01

@@ -9,7 +9,8 @@ COMMANDS = {
     "touch_down" : 0x08,
     "touch_up" : 0x09,
     "touch_move" : 0x0A,
-    "fill_color" : 0x0B
+    "fill_color" : 0x0B,
+    "repeat_pixels_x" : 0x0C
 }
 
 def encode_img(img):

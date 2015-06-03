@@ -9,6 +9,7 @@ import Image
 
 import Tools
 import CtrlButton
+import CtrlSlide
 
 BUFFER_SIZE = 512
 HEARTBEAT = 0
@@ -51,7 +52,7 @@ class Client(threading.Thread):
                 if not self.write_queue.empty():
                     data = self.write_queue.get()
 
-                    print Tools.str_to_hex2(data)
+                    #print Tools.str_to_hex2(data)
 
                     self.sock.sendall(data)
                 else:
@@ -220,6 +221,7 @@ def on_disconnect(client):
     actual_img = None
 
 CtrlButton.init(Image.open("button_off.png").convert("RGB"), Image.open("button_on.png").convert("RGB"), Image.open("button_mask.png").convert("RGB"))
+CtrlSlide.init(Image.open("slide_btn.png").convert("RGB"), Image.open("slide_bar.png").convert("RGB"), Image.open("slide_mask.png").convert("RGB"))
 g_ctrls = []
 
 def print_cb(data):
@@ -232,9 +234,24 @@ def on_touch_up(client, data):
     global g_ctrls
 
     x, y = struct.unpack("HH", data[0:4])
-    print ">> click %d:%d" % (x, y)
     for ctrl in g_ctrls:
         if ctrl.on_touch_up(x, y):
+            break
+
+def on_touch_down(client, data):
+    global g_ctrls
+
+    x, y = struct.unpack("HH", data[0:4])
+    for ctrl in g_ctrls:
+        if ctrl.on_touch_down(x, y):
+            break
+
+def on_touch_move(client, data):
+    global g_ctrls
+
+    x, y = struct.unpack("HH", data[0:4])
+    for ctrl in g_ctrls:
+        if ctrl.on_touch_move(x, y):
             break
 
 def on_description(data, client):
@@ -244,15 +261,21 @@ def on_description(data, client):
 
 def on_filled(data, client):
     global g_ctrls
-    button = CtrlButton.CtrlButton(client, 30, 30)
-    g_ctrls.append(button)
-    button.show()
+    ctrl = CtrlButton.CtrlButton(client, 30, 100)
+    g_ctrls.append(ctrl)
+    ctrl.show()
+
+    ctrl = CtrlSlide.CtrlSlide(client, 30, 30, 200)
+    g_ctrls.append(ctrl)
+    ctrl.show()
 
 host = "0.0.0.0"
 port = 7654
 
 server = Server(host, port)
 server.add_command_listener("touch_up", on_touch_up)
+server.add_command_listener("touch_down", on_touch_down)
+server.add_command_listener("touch_move", on_touch_move)
 server.add_listener("connect", on_connect)
 server.add_listener("disconnect", on_disconnect)
 server.start()

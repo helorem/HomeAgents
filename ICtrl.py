@@ -3,11 +3,14 @@ import struct
 import Tools
 
 class ICtrl:
-    def __init__(self, client, x, y, img_buffer, mask):
+    def __init__(self, client, x, y, img_buffer=None, mask=None):
         self.client = client
         self.x = x
         self.y = y
-        self.w, self.h = mask.size
+        self.w = 0
+        self.h = 0
+        if mask:
+            self.w, self.h = mask.size
         self.img_buffer = img_buffer
         self.mask = mask
 
