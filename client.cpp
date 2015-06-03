@@ -107,7 +107,7 @@ void drawPixel(int x, int y, uint16 color565)
     uint8 g = (color565 >> 3) & 0xFC;
     uint8 b = (color565 << 3) & 0xFF;
 
-    std::cout << std::dec << "pixel " << x << "," << y << " " << std::hex << (int)color565 << "=>" << std::dec << (int)r << " " << (int)g << " " << (int)b << std::dec << std::endl;
+    //std::cout << std::dec << "pixel " << x << "," << y << " " << std::hex << (int)color565 << "=>" << std::dec << (int)r << " " << (int)g << " " << (int)b << std::dec << std::endl;
 
     drawPixel2(x, y, r, g, b);
 }

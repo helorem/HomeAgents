@@ -17,6 +17,7 @@ class PixelConsumer : public BaseConsumer
         virtual void end()
         {
             drawEnd();
+            this->real_index = 0;
 
             struct msg_base res;
             res.cmd = CMD_ACK;
