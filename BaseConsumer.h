@@ -29,6 +29,7 @@ class BaseConsumer
 
     public:
         BaseConsumer(uint8 cmd);
+        BaseConsumer(uint8 cmd, uint8 header_size, uint8* header);
         BaseConsumer(uint8 cmd, uint8 header_size, uint8* header, uint8 buffer_size, uint8* buffer);
         bool consume(uint8 data);
 };

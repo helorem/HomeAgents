@@ -14,6 +14,20 @@ BaseConsumer::BaseConsumer(uint8 cmd) :
     base_header_allocated.cmd = cmd;
 }
 
+BaseConsumer::BaseConsumer(uint8 cmd, uint8 header_size, uint8* header) :
+    header_size(header_size),
+    header(header),
+    state(CONSUMER_STATE_WAITING),
+    remaining(0),
+    buffer_size(0),
+    buffer(NULL),
+    buffer_index(0),
+    base_header_allocated(),
+    index(0)
+{
+    base_header_allocated.cmd = cmd;
+}
+
 BaseConsumer::BaseConsumer(uint8 cmd, uint8 header_size, uint8* header, uint8 buffer_size, uint8* buffer) :
     header_size(header_size),
     header(header),

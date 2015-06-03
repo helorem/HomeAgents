@@ -5,8 +5,10 @@ import threading
 import time
 import Queue
 import struct
+import Image
 
 import Tools
+import CtrlButton
 
 BUFFER_SIZE = 512
 HEARTBEAT = 0
@@ -217,149 +219,8 @@ def on_disconnect(client):
     global actual_img
     actual_img = None
 
-#TEST
-img_buffer = {}
-
-#TEST FCT
-actual_img = None
-def send_img(client, filename):
-    global actual_img
-    global img_buffer
-
-    print "send_img", filename
-
-    found = False
-    if actual_img:
-        name = "%s_%s" % (actual_img, filename)
-        if name in img_buffer:
-            print "load", name
-            palet_size, palet, pixels_size, pixels, rect = img_buffer[name]
-            found = True
-    elif filename in img_buffer:
-        print "load", filename
-        palet_size, palet, pixels_size, pixels, rect = img_buffer[filename]
-        found = True
-
-    if not found:
-        im = Image.open(filename)
-        rgb_im = im.convert("RGB")
-        w, h = im.size
-
-        rect = (0, 0, w, h)
-        if actual_img:
-            rect = img_diff(filename, actual_img)
-            name = "%s_%s" % (actual_img, filename)
-        else:
-            name = filename
-        w = rect[2] - rect[0]
-        h = rect[3] - rect[1]
-
-        print "rect:", rect, w, h
-        rgb_im = rgb_im.crop(rect)
-
-        pixels = []
-        palet = []
-
-        for y in xrange(0, h):
-            for x in xrange(0, w):
-                r, g, b = rgb_im.getpixel((x, y))
-                color = encode_color565(r, g, b)
-                if color not in palet:
-                    palet.append(color)
-                pixels.append(palet.index(color))
-
-        palet_size = len(palet)
-        pixels_size = len(pixels)
-
-        #use RLE
-        pixels = compress_rle(pixels)
-        pixels_size = len(pixels)
-
-        print "save %s" % name
-        img_buffer[name] = (palet_size, palet, pixels_size, pixels, rect)
-
-    actual_img = filename
-
-    args = struct.pack("H%s" % ("H" * palet_size), palet_size, *palet)
-    print "len palet : %d" % palet_size
-    print "len args : %d" % len(args)
-    print "first color=", palet[0], " ", decode_color565(palet[0])
-
-    client.send_command("send_palet", args=args, callback=print_cb)
-
-    w = rect[2] - rect[0]
-    args = struct.pack("HHHIB%s" % ("B" * pixels_size), rect[0], rect[1], w, pixels_size, Tools.C_RLE, *pixels)
-    print "len pixels : %d" % pixels_size
-    print "len args : %d" % len(args)
-
-    client.send_command("draw_pixels", args=args, callback=print_cb)
-
-#TEST FCT
-def decode_color565(color):
-    r = (color >> 8) & 0xF8
-    g = (color >> 3) & 0xFC
-    b = (color << 3) & 0xFF
-
-    return (r, g, b);
-
-#TEST FCT
-def encode_color565(r, g, b):
-    return ((r & 0xF8) << 8) | ((g & 0xFC) << 3) | (b >> 3);
-
-#TEST FCT
-def img_diff(img1, img2):
-    im = Image.open(img1)
-    rgb_im1 = im.convert("RGB")
-    w, h = im.size
-
-    im = Image.open(img2)
-    rgb_im2 = im.convert("RGB")
-
-    min_y = h
-    max_y = 0
-    min_x = w
-    max_x = 0
-    for y in xrange(0, h):
-        for x in xrange(0, w):
-            pix1 = rgb_im1.getpixel((x, y))
-            pix2 = rgb_im2.getpixel((x, y))
-            if pix1 != pix2:
-                if y < min_y:
-                    min_y = y
-                if y > max_y:
-                    max_y = y
-                if x < min_x:
-                    min_x = x
-                if x > max_x:
-                    max_x = x
-    if min_x > max_x or min_y > max_y:
-        return None
-    return (min_x, min_y, max_x, max_y)
-
-
-#TEST FCT
-def compress_rle(pixels):
-    res = []
-    count = 0
-    val = None
-    for pix in pixels:
-        if val != pix:
-            if count:
-                res.append(count)
-                res.append(val)
-            val = pix
-            count = 1
-        else:
-            count += 1
-            if count >= 255:
-                res.append(count)
-                res.append(val)
-                count = 0
-    if count:
-        res.append(count)
-        res.append(val)
-
-    return res
+CtrlButton.init(Image.open("button_off.png").convert("RGB"), Image.open("button_on.png").convert("RGB"), Image.open("button_mask.png").convert("RGB"))
+g_ctrls = []
 
 def print_cb(data):
     cmd, args = data
@@ -368,18 +229,24 @@ def print_cb(data):
         print Tools.str_to_hex2(args)
 
 def on_touch_up(client, data):
-    global actual_img
+    global g_ctrls
 
     x, y = struct.unpack("HH", data[0:4])
     print ">> click %d:%d" % (x, y)
-    if actual_img == "off.png":
-        send_img(client, "on.png")
-    else:
-        send_img(client, "off.png")
+    for ctrl in g_ctrls:
+        if ctrl.onTouchUp(x, y):
+            break
 
 def on_description(data, client):
     print ">> description %s" % (data,)
-    send_img(client, "off.png")
+    args = struct.pack("HHHHH", 0, 0, 240, 320, Tools.encode_color565(16, 28, 40))
+    client.send_command("fill_color", args=args, callback=on_filled, param=client)
+
+def on_filled(data, client):
+    global g_ctrls
+    button = CtrlButton.CtrlButton(client, 30, 30)
+    g_ctrls.append(button)
+    button.show()
 
 host = "0.0.0.0"
 port = 7654
@@ -390,7 +257,6 @@ server.add_listener("connect", on_connect)
 server.add_listener("disconnect", on_disconnect)
 server.start()
 
-import Image
 
 try:
     while True:

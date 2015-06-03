@@ -8,11 +8,12 @@ COMMANDS = {
     "send_palet" : 0x07,
     "touch_down" : 0x08,
     "touch_up" : 0x09,
-    "touch_move" : 0x0A
+    "touch_move" : 0x0A,
+    "fill_color" : 0x0B
 }
 
-C_NONE = 0x00
-C_RLE = 0x01
+def encode_color565(r, g, b):
+    return ((r & 0xF8) << 8) | ((g & 0xFC) << 3) | (b >> 3);
 
 def str_to_hex2(val):
     res = []

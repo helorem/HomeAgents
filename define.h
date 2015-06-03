@@ -15,6 +15,7 @@
 #define CMD_TOUCH_DOWN  0x08
 #define CMD_TOUCH_UP    0x09
 #define CMD_TOUCH_MOVE  0x0A
+#define CMD_FILL_COLOR  0x0B
 
 #define CONSUMER_STATE_WAITING      0x00
 #define CONSUMER_STATE_READ_HEADER  0x01
@@ -41,7 +42,6 @@ struct msg_pixels
     uint16              w;
     uint8               _pad[2]; //TODO correct it in the server
     uint32              size;
-    uint8               mode;
 };
 
 struct msg_touch
@@ -56,6 +56,16 @@ struct msg_description
     struct msg_base     base;
     char                name[16];
     char                version[6];
+};
+
+struct msg_fill
+{
+    struct msg_base     base;
+    uint16              x;
+    uint16              y;
+    uint16              w;
+    uint16              h;
+    uint16              color;
 };
 #pragma pack(pop)
 

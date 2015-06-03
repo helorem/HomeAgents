@@ -17,6 +17,7 @@
 #include "PingConsumer.hpp"
 #include "PaletConsumer.hpp"
 #include "PixelConsumer.hpp"
+#include "FillConsumer.hpp"
 
 #include "functions.hpp"
 
@@ -186,6 +187,9 @@ int initNetwork()
     PixelConsumer cons4 = PixelConsumer();
     cons4.setPalet(&cons3);
     consumers[idx++] = &cons4;
+
+    FillConsumer cons5 = FillConsumer();
+    consumers[idx++] = &cons5;
 
     consumers[idx] = NULL;
 
