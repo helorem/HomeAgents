@@ -12,7 +12,9 @@
 #define CMD_ACK         0x05
 #define CMD_DRAW_PIXELS 0x06
 #define CMD_SET_PALET   0x07
-#define CMD_CLICK       0x08
+#define CMD_TOUCH_DOWN  0x08
+#define CMD_TOUCH_UP    0x09
+#define CMD_TOUCH_MOVE  0x0A
 
 #define CONSUMER_STATE_WAITING      0x00
 #define CONSUMER_STATE_READ_HEADER  0x01
@@ -42,7 +44,7 @@ struct msg_pixels
     uint8               mode;
 };
 
-struct msg_click
+struct msg_touch
 {
     struct msg_base     base;
     uint16              x;

@@ -6,7 +6,9 @@ COMMANDS = {
     "ack" : 0x05,
     "draw_pixels" : 0x06,
     "send_palet" : 0x07,
-    "click" : 0x08
+    "touch_down" : 0x08,
+    "touch_up" : 0x09,
+    "touch_move" : 0x0A
 }
 
 C_NONE = 0x00

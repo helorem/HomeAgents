@@ -367,7 +367,7 @@ def print_cb(data):
     if len(args) > 0:
         print Tools.str_to_hex2(args)
 
-def on_click(client, data):
+def on_touch_up(client, data):
     global actual_img
 
     x, y = struct.unpack("HH", data[0:4])
@@ -385,7 +385,7 @@ host = "0.0.0.0"
 port = 7654
 
 server = Server(host, port)
-server.add_command_listener("click", on_click)
+server.add_command_listener("touch_up", on_touch_up)
 server.add_listener("connect", on_connect)
 server.add_listener("disconnect", on_disconnect)
 server.start()

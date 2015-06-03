@@ -32,6 +32,7 @@ int sdl_thread(void *data)
 {
     bool quit;
     SDL_Event event;
+    bool touch_down = false;
 
     if (SDL_Init(SDL_INIT_VIDEO) < 0)
     {
@@ -59,12 +60,35 @@ int sdl_thread(void *data)
                     }
                     else if (event.type == SDL_MOUSEBUTTONDOWN)
                     {
-                        struct msg_click res;
-                        res.base.cmd = CMD_CLICK;
+                        touch_down = true;
+                        struct msg_touch res;
+                        res.base.cmd = CMD_TOUCH_DOWN;
                         res.base.cmd_id = 50; //TODO improve
                         res.x = event.button.x;
                         res.y = event.button.y;
                         socket_send((uint8*)&res, sizeof(res));
+                    }
+                    else if (event.type == SDL_MOUSEBUTTONUP)
+                    {
+                        touch_down = false;
+                        struct msg_touch res;
+                        res.base.cmd = CMD_TOUCH_UP;
+                        res.base.cmd_id = 50; //TODO improve
+                        res.x = event.button.x;
+                        res.y = event.button.y;
+                        socket_send((uint8*)&res, sizeof(res));
+                    }
+                    else if (event.type == SDL_MOUSEMOTION)
+                    {
+                        if (touch_down)
+                        {
+                            struct msg_touch res;
+                            res.base.cmd = CMD_TOUCH_MOVE;
+                            res.base.cmd_id = 50; //TODO improve
+                            res.x = event.button.x;
+                            res.y = event.button.y;
+                            socket_send((uint8*)&res, sizeof(res));
+                        }
                     }
                 }
             }
