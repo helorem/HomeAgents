@@ -234,7 +234,7 @@ def on_touch_up(client, data):
     x, y = struct.unpack("HH", data[0:4])
     print ">> click %d:%d" % (x, y)
     for ctrl in g_ctrls:
-        if ctrl.onTouchUp(x, y):
+        if ctrl.on_touch_up(x, y):
             break
 
 def on_description(data, client):

@@ -12,6 +12,47 @@ COMMANDS = {
     "fill_color" : 0x0B
 }
 
+def encode_img(img):
+    w, h = img.size
+    pixels = []
+    palet = []
+
+    for y in xrange(0, h):
+        for x in xrange(0, w):
+            r, g, b = img.getpixel((x, y))
+            color = encode_color565(r, g, b)
+            if color not in palet:
+                palet.append(color)
+            pixels.append(palet.index(color))
+
+    #use RLE
+    pixels = compress_rle(pixels)
+
+    return (palet, pixels)
+
+def compress_rle(data):
+    res = []
+    count = 0
+    val = None
+    for item in data:
+        if val != item:
+            if count:
+                res.append(count)
+                res.append(val)
+            val = item
+            count = 1
+        else:
+            count += 1
+            if count >= 255:
+                res.append(count)
+                res.append(val)
+                count = 0
+    if count:
+        res.append(count)
+        res.append(val)
+
+    return res
+
 def encode_color565(r, g, b):
     return ((r & 0xF8) << 8) | ((g & 0xFC) << 3) | (b >> 3);
 
